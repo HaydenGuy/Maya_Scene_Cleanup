@@ -14,7 +14,7 @@ def list_all_cameras():
     return camera_names
 
 # Gets a list of everything in the scene
-def list_everything():
+def list_objects():
     # List everything in the scene in long name format (|group1|pSphere1)
     all_objects = cmds.ls(dag=True, long=True)
     group_names = []
@@ -26,10 +26,10 @@ def list_everything():
 
     return group_names
 
-# Filters the everything list so that it doesn't contain cameras and only shows the first appearance of each group name
+# Filters the object list so that it doesn't contain cameras and only shows the first appearance of each group name
 def filtered_list():
     all_cameras = list_all_cameras()
-    group_names = list_everything()
+    group_names = list_objects()
 
     # Filters the group names by excluding the cameras with list comprehension
     # To get unique names, first convert the list into a dictionary to remove duplicate items and convert it back into a list
@@ -46,3 +46,39 @@ def delete_empty_groups():
 
     # Delete the empty groups
     cmds.delete(empty_groups)
+
+# Gets a list of all materials in the scene, filters and returns them if they aren't the default materials
+def list_all_materials():
+    default_materials = ['lambert1', 'particleCloud1', 'shaderGlow1', 'standardSurface1']
+    all_materials = cmds.ls(materials=True)
+
+    filtered_materials = [mat for mat in all_materials if mat not in default_materials]
+
+    return  filtered_materials
+
+# Check if a shading engine has connected objects
+def has_connect_objects(shading_engine):
+    return cmds.sets(shading_engine, q=True)
+
+# Creates a set of used materials in the scene
+def list_used_materials():
+    used_materials = set()
+    
+    # Iterate through all shading engines in the scene
+    for shading_engine in cmds.ls(type='shadingEngine'):
+        # Check if the shading engine is connected to any objects
+        if has_connect_objects(shading_engine):
+            # List all materials connect to the shading engine
+            connected_objects =  cmds.ls(cmds.listConnections(shading_engine), materials=True)
+            used_materials.update(connected_objects) # Update the set of used materials
+
+    return used_materials
+
+# If the material appears in the material list and not in the used material list it is deleted
+def delete_unused_materials():
+    material_list = list_all_materials()
+    used_materials = list_used_materials()
+    
+    for material in material_list:
+        if material not in used_materials:
+            cmds.delete(material)
